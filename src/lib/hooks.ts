@@ -22,7 +22,7 @@ export function useDebounce<T>(value: T, delay: number): T {
 /**
  * A custom hook that provides a debounced callback.
  */
-export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
+export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
   delay: number
 ) {
@@ -35,6 +35,6 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => unknown>(
 
     timeoutRef.current = setTimeout(() => {
       callback(...args);
-    }, delay as number);
+    }, delay);
   };
 }
