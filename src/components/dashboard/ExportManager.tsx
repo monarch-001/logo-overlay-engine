@@ -26,21 +26,33 @@ export default function ExportManager() {
     }
 
     setExporting(true, 0);
-    toast.info("Starting batch process", { description: `Processing ${images.length} images...` });
+    
+    // DEBUG LOGS
+    const supportsFileSystemAccess = 'showDirectoryPicker' in window;
+    console.log("Browser supports Folder Picker:", supportsFileSystemAccess);
+    console.log("User Agent:", navigator.userAgent);
+    
+    toast.info("Starting batch process", { 
+      description: supportsFileSystemAccess 
+        ? "Your browser supports Direct Folder Export." 
+        : "Direct Folder Export not supported in this browser. Falling back to ZIP." 
+    });
 
     try {
       // 1. Check for Directory Picker support (Laptop/Desktop feature)
       let dirHandle: any = null;
-      const supportsFileSystemAccess = 'showDirectoryPicker' in window;
       
       if (supportsFileSystemAccess) {
         try {
+          toast.info("Please select a destination folder in the popup...");
           dirHandle = await (window as any).showDirectoryPicker({
             mode: 'readwrite',
             startIn: 'pictures'
           });
-        } catch (e) {
-          console.warn("Directory picker cancelled or failed, falling back to ZIP");
+          toast.success("Folder linked successfully!");
+        } catch (e: any) {
+          console.warn("Directory picker cancelled or failed:", e);
+          toast.error("Folder picker failed", { description: "Falling back to ZIP download." });
         }
       }
 
