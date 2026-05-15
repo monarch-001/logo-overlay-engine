@@ -129,6 +129,7 @@ export default function ExportManager() {
 
   return (
     <div className="flex flex-col items-end gap-2">
+      <span className="text-[8px] text-slate-600 font-mono">v1.2-folder-debug</span>
       {isExporting && (
         <div className="w-48 space-y-1.5">
           <div className="flex justify-between text-[10px] text-slate-400 font-medium">
