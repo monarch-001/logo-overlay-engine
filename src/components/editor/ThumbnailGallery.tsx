@@ -7,6 +7,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { X, CheckCircle2, Clock, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 const ThumbnailItem = memo(({ 
   img, 
