@@ -118,13 +118,36 @@ export default function ThumbnailGallery() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleExportAll = async () => {
-    if (images.length === 0 || !logo.processed) return;
+    if (images.length === 0 || !logo.processed || isExporting) return;
     
-    // Logic similar to ExportManager
     setExporting(true, 0);
+    
+    // DEBUG LOGS
+    const supportsFileSystemAccess = 'showDirectoryPicker' in window;
+    toast.info("Starting batch process", { 
+      description: supportsFileSystemAccess 
+        ? "Your browser supports Direct Folder Export." 
+        : "Direct Folder Export not supported. Falling back to ZIP." 
+    });
+
     try {
+      let dirHandle: any = null;
+      if (supportsFileSystemAccess) {
+        try {
+          toast.info("Please select a destination folder...");
+          dirHandle = await (window as any).showDirectoryPicker({
+            mode: 'readwrite',
+            startIn: 'pictures'
+          });
+          toast.success("Folder linked!");
+        } catch (e) {
+          console.warn("Picker failed:", e);
+          toast.error("Folder picker failed", { description: "Using ZIP instead." });
+        }
+      }
+
       const JSZip = (await import('jszip')).default;
-      const zip = new JSZip();
+      const zip = !dirHandle ? new JSZip() : null;
       const logoBlob = await fetch(logo.processed).then(r => r.blob());
       const logoFile = new File([logoBlob], 'logo.png', { type: 'image/png' });
 
@@ -147,8 +170,20 @@ export default function ThumbnailGallery() {
 
           const resultBlob = await response.blob();
           const resultUrl = URL.createObjectURL(resultBlob);
-          const fileName = `processed_${img.file.name.split('.')[0]}.png`;
-          zip.file(fileName, resultBlob);
+          
+          const now = new Date();
+          const timestamp = now.toISOString().replace(/[-T:]/g, '').split('.')[0] + '_' + now.getMilliseconds();
+          const baseName = img.file.name.split('.')[0];
+          const fileName = `processed_${baseName}_${timestamp}.png`;
+
+          if (dirHandle) {
+            const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(resultBlob);
+            await writable.close();
+          } else if (zip) {
+            zip.file(fileName, resultBlob);
+          }
           
           updateImageStatus(img.id, 'completed', resultUrl);
         } catch (err) {
@@ -160,15 +195,20 @@ export default function ThumbnailGallery() {
         setExporting(true, progress);
       }
 
-      const zipContent = await zip.generateAsync({ type: "blob" });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(zipContent);
-      link.download = `overlay_export_${new Date().getTime()}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (zip) {
+        const zipContent = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(zipContent);
+        link.download = `overlay_export_${new Date().getTime()}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      toast.success(dirHandle ? "Saved to folder!" : "Export complete!");
     } catch (error) {
       console.error("Export failed:", error);
+      toast.error("Export failed");
     } finally {
       setExporting(false, 0);
     }
