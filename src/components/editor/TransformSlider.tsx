@@ -42,10 +42,11 @@ export default function TransformSlider({
     }
   }, [value, isDragging]);
 
-  const debouncedOnChange = useDebouncedCallback((val: number) => {
+  const debouncedOnChange = useDebouncedCallback((...args: unknown[]) => {
+    const val = args[0] as number;
     onChange(val);
-  }, 16); // 16ms for roughly 60fps responsiveness
-
+  }, 16);
+  
   const handleSliderChange = (vals: number | number[]) => {
     // Robustly handle the values array from the slider primitive
     const rawVal = Array.isArray(vals) ? vals[0] : vals;
