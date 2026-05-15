@@ -29,12 +29,25 @@ export default function ExportManager() {
     toast.info("Starting batch process", { description: `Processing ${images.length} images...` });
 
     try {
-      const zip = new JSZip();
+      // 1. Check for Directory Picker support (Laptop/Desktop feature)
+      let dirHandle: any = null;
+      const supportsFileSystemAccess = 'showDirectoryPicker' in window;
+      
+      if (supportsFileSystemAccess) {
+        try {
+          dirHandle = await (window as any).showDirectoryPicker({
+            mode: 'readwrite',
+            startIn: 'pictures'
+          });
+        } catch (e) {
+          console.warn("Directory picker cancelled or failed, falling back to ZIP");
+        }
+      }
+
+      const zip = !dirHandle ? new JSZip() : null;
       const logoBlob = await fetch(logo.processed).then(r => r.blob());
       const logoFile = new File([logoBlob], 'logo.png', { type: 'image/png' });
 
-      // Process in chunks or one by one
-      // For simplicity and to avoid overwhelming the server, we'll do one by one
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
         updateImageStatus(img.id, 'processing');
@@ -54,17 +67,21 @@ export default function ExportManager() {
 
           const resultBlob = await response.blob();
           
-          // Generate a unique timestamped filename: processed_name_YYMMDD_HHMMSS_ms.png
           const now = new Date();
-          const timestamp = now.toISOString()
-            .replace(/[-T:]/g, '') // Remove separators
-            .split('.')[0]         // Get up to seconds
-            + '_' + now.getMilliseconds(); // Add milliseconds for extreme uniqueness
-          
+          const timestamp = now.toISOString().replace(/[-T:]/g, '').split('.')[0] + '_' + now.getMilliseconds();
           const baseName = img.file.name.split('.')[0];
           const fileName = `processed_${baseName}_${timestamp}.png`;
           
-          zip.file(fileName, resultBlob);
+          if (dirHandle) {
+            // DIRECT SAVE TO SYSTEM FOLDER
+            const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(resultBlob);
+            await writable.close();
+          } else if (zip) {
+            // FALLBACK TO ZIP (for Mobile/Safari)
+            zip.file(fileName, resultBlob);
+          }
           
           updateImageStatus(img.id, 'completed', URL.createObjectURL(resultBlob));
         } catch (err) {
@@ -76,17 +93,20 @@ export default function ExportManager() {
         setExporting(true, progress);
       }
 
-      toast.info("Generating ZIP archive...");
-      const zipContent = await zip.generateAsync({ type: "blob" });
-      
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(zipContent);
-      link.download = `overlay_export_${new Date().getTime()}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (zip) {
+        toast.info("Generating ZIP archive...");
+        const zipContent = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(zipContent);
+        link.download = `overlay_export_${new Date().getTime()}.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
 
-      toast.success("Export complete!", { description: "All images processed and downloaded." });
+      toast.success(dirHandle ? "Saved to folder!" : "Export complete!", { 
+        description: dirHandle ? "All images saved directly to your system." : "All images processed and downloaded as ZIP." 
+      });
     } catch (error) {
       console.error("Export failed:", error);
       toast.error("Export failed", { description: "An error occurred during batch processing." });
