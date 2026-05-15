@@ -53,7 +53,17 @@ export default function ExportManager() {
           if (!response.ok) throw new Error(`Failed to process ${img.file.name}`);
 
           const resultBlob = await response.blob();
-          const fileName = `processed_${img.file.name.split('.')[0]}.png`;
+          
+          // Generate a unique timestamped filename: processed_name_YYMMDD_HHMMSS_ms.png
+          const now = new Date();
+          const timestamp = now.toISOString()
+            .replace(/[-T:]/g, '') // Remove separators
+            .split('.')[0]         // Get up to seconds
+            + '_' + now.getMilliseconds(); // Add milliseconds for extreme uniqueness
+          
+          const baseName = img.file.name.split('.')[0];
+          const fileName = `processed_${baseName}_${timestamp}.png`;
+          
           zip.file(fileName, resultBlob);
           
           updateImageStatus(img.id, 'completed', URL.createObjectURL(resultBlob));
