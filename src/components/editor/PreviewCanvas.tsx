@@ -118,20 +118,21 @@ const LogoComponent = memo(({ url, settings, onTransform, containerSize, offset 
 LogoComponent.displayName = 'LogoComponent';
 
 export default function PreviewCanvas() {
-  const { logo, settings, updateSettings } = useOverlayStore(useShallow((state) => ({
+  const { logo, globalSettings, updateSettings, batchMode, images, activeImageId } = useOverlayStore(useShallow((state) => ({
     logo: state.logo,
-    settings: state.settings,
+    globalSettings: state.settings,
     updateSettings: state.updateSettings,
+    batchMode: state.batchMode,
+    images: state.images,
+    activeImageId: state.activeImageId,
   })));
   
-  const images = useOverlayStore((state) => state.images);
-  const activeImageId = useOverlayStore((state) => state.activeImageId);
-
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<any>(null);
 
   const activeImage = useMemo(() => images.find(img => img.id === activeImageId) || images[0], [images, activeImageId]);
+  const settings = (!batchMode && activeImage?.settings) ? activeImage.settings : globalSettings;
   const [bgImage] = useImage(activeImage?.preview || '');
 
   const handleDownloadCurrent = () => {

@@ -8,8 +8,18 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import TransformSlider from '@/components/editor/TransformSlider';
 
 export default function CanvasEditor() {
-  const settings = useOverlayStore(useShallow((state) => state.settings));
+  const { globalSettings, batchMode, activeImageId, images } = useOverlayStore(useShallow((state) => ({
+    globalSettings: state.settings,
+    batchMode: state.batchMode,
+    activeImageId: state.activeImageId,
+    images: state.images,
+  })));
+  
   const updateSettings = useOverlayStore((state) => state.updateSettings);
+  const setBatchMode = useOverlayStore((state) => state.setBatchMode);
+
+  const activeImage = images.find(img => img.id === activeImageId);
+  const settings = (!batchMode && activeImage?.settings) ? activeImage.settings : globalSettings;
 
   const anchors: { label: string; value: AnchorPoint; icon: string }[] = [
     { label: 'TL', value: 'top-left', icon: '↖' },
@@ -21,6 +31,25 @@ export default function CanvasEditor() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {/* Batch Mode Toggle */}
+      <div className="bg-indigo-950/20 p-4 rounded-xl border border-indigo-500/20 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+             <LayoutGrid className={`w-4 h-4 transition-colors ${batchMode ? 'text-indigo-400' : 'text-slate-500'}`} />
+             <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">Batch Processing</span>
+          </div>
+          <Switch 
+            checked={batchMode}
+            onCheckedChange={setBatchMode}
+          />
+        </div>
+        <p className="text-[10px] text-slate-500 leading-relaxed font-medium">
+          {batchMode 
+            ? "Settings apply to all images in the batch simultaneously." 
+            : "Independent mode: Adjust settings for each image individually."}
+        </p>
+      </div>
+
       {/* Placement Mode Toggle */}
       <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 space-y-4">
         <div className="flex items-center justify-between">

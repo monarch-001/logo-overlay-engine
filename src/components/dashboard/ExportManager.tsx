@@ -12,7 +12,8 @@ export default function ExportManager() {
   const { 
     images, 
     logo, 
-    settings, 
+    settings: globalSettings, 
+    batchMode,
     isExporting, 
     exportProgress, 
     setExporting,
@@ -29,8 +30,6 @@ export default function ExportManager() {
     
     // DEBUG LOGS
     const supportsFileSystemAccess = 'showDirectoryPicker' in window;
-    console.log("Browser supports Folder Picker:", supportsFileSystemAccess);
-    console.log("User Agent:", navigator.userAgent);
     
     toast.info("Starting batch process", { 
       description: supportsFileSystemAccess 
@@ -65,10 +64,11 @@ export default function ExportManager() {
         updateImageStatus(img.id, 'processing');
         
         try {
+          const imgSettings = (!batchMode && img.settings) ? img.settings : globalSettings;
           const formData = new FormData();
           formData.append('image', img.file);
           formData.append('logo', logoFile);
-          formData.append('settings', JSON.stringify(settings));
+          formData.append('settings', JSON.stringify(imgSettings));
 
           const response = await fetch('/api/process', {
             method: 'POST',

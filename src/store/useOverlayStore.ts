@@ -9,6 +9,7 @@ export type OverlayImage = {
   progress?: number;
   width?: number;
   height?: number;
+  settings?: CanvasSettings;
 };
 
 export type AnchorPoint = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center' | 'custom';
@@ -35,6 +36,7 @@ interface OverlayState {
   images: OverlayImage[];
   activeImageId: string | null;
   settings: CanvasSettings;
+  batchMode: boolean;
   isExporting: boolean;
   exportProgress: number;
   
@@ -46,6 +48,7 @@ interface OverlayState {
   updateImageStatus: (id: string, status: OverlayImage['status'], resultUrl?: string, progress?: number) => void;
   setExporting: (isExporting: boolean, progress?: number) => void;
   updateSettings: (settings: Partial<CanvasSettings>) => void;
+  setBatchMode: (mode: boolean) => void;
   reset: () => void;
 }
 
@@ -69,6 +72,7 @@ export const useOverlayStore = create<OverlayState>((set) => ({
   images: [],
   activeImageId: null,
   settings: initialSettings,
+  batchMode: true,
   isExporting: false,
   exportProgress: 0,
 
@@ -80,6 +84,7 @@ export const useOverlayStore = create<OverlayState>((set) => ({
       file,
       preview: URL.createObjectURL(file),
       status: 'idle' as const,
+      settings: { ...state.settings },
     }));
     
     const updatedImages = [...state.images, ...newImages];
@@ -112,28 +117,49 @@ export const useOverlayStore = create<OverlayState>((set) => ({
   setExporting: (isExporting, progress = 0) => set({ isExporting, exportProgress: progress }),
 
   updateSettings: (newSettings) => set((state) => {
-    const merged = { ...state.settings, ...newSettings };
+    const currentSettings = (!state.batchMode && state.activeImageId)
+      ? state.images.find(img => img.id === state.activeImageId)?.settings || state.settings
+      : state.settings;
+
+    const merged = { ...currentSettings, ...newSettings };
     
     // Defensive validation for all numeric fields
     const validated = { ...merged };
     const validate = (val: unknown, fallback: number, min: number, max: number) => {
       if (typeof val !== 'number' || !Number.isFinite(val)) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error(`[OverlayStore] Invalid numeric value detected:`, val, `Falling back to:`, fallback);
-        }
         return fallback;
       }
       return Math.min(Math.max(val, min), max);
     };
 
-    validated.x = validate(merged.x, state.settings.x, -100, 200); // Allow some overflow for manual drag
-    validated.y = validate(merged.y, state.settings.y, -100, 200);
-    validated.scale = validate(merged.scale, state.settings.scale, 0.001, 5);
-    validated.rotation = validate(merged.rotation, state.settings.rotation, -3600, 3600); // Allow multiple turns
-    validated.opacity = validate(merged.opacity, state.settings.opacity, 0, 1);
-    validated.padding = validate(merged.padding, state.settings.padding, 0, 50);
+    validated.x = validate(merged.x, currentSettings.x, -100, 200);
+    validated.y = validate(merged.y, currentSettings.y, -100, 200);
+    validated.scale = validate(merged.scale, currentSettings.scale, 0.001, 5);
+    validated.rotation = validate(merged.rotation, currentSettings.rotation, -3600, 3600);
+    validated.opacity = validate(merged.opacity, currentSettings.opacity, 0, 1);
+    validated.padding = validate(merged.padding, currentSettings.padding, 0, 50);
+
+    if (!state.batchMode && state.activeImageId) {
+      return {
+        images: state.images.map(img => 
+          img.id === state.activeImageId ? { ...img, settings: validated } : img
+        )
+      };
+    }
 
     return { settings: validated };
+  }),
+
+  setBatchMode: (batchMode) => set((state) => {
+    if (!batchMode) {
+      // When turning OFF batch mode, sync current global settings to all images
+      // so they start their independent editing from the current state.
+      return { 
+        batchMode,
+        images: state.images.map(img => ({ ...img, settings: { ...state.settings } }))
+      };
+    }
+    return { batchMode };
   }),
 
   reset: () => set({
@@ -141,6 +167,7 @@ export const useOverlayStore = create<OverlayState>((set) => ({
     images: [],
     activeImageId: null,
     settings: initialSettings,
+    batchMode: true,
     isExporting: false,
     exportProgress: 0,
   }),
