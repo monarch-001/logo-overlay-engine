@@ -18,6 +18,7 @@ export default function LogoUpload() {
     try {
       toast.info("Removing background...", { description: "Processing AI model in-browser" });
       const blob = await removeBackground(file, {
+        publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
         progress: (status, progress) => {
           // You could track progress here if needed
           console.log(`Processing: ${status} (${(progress * 100).toFixed(0)}%)`);
@@ -102,7 +103,19 @@ export default function LogoUpload() {
             
             <div className="space-y-2 text-center">
               <p className="text-[10px] uppercase text-slate-500 font-bold">Transparent</p>
-              <div className="aspect-square bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] bg-slate-800 rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center p-2 relative">
+              <div 
+                className="aspect-square rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center p-2 relative bg-slate-800"
+                style={{
+                  backgroundImage: `
+                    linear-gradient(45deg, #1e293b 25%, transparent 25%),
+                    linear-gradient(-45deg, #1e293b 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #1e293b 75%),
+                    linear-gradient(-45deg, transparent 75%, #1e293b 75%)
+                  `,
+                  backgroundSize: '20px 20px',
+                  backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+                }}
+              >
                 {logo.isProcessing ? (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 backdrop-blur-sm gap-2">
                     <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
