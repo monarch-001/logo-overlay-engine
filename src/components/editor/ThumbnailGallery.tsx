@@ -114,7 +114,7 @@ export default function ThumbnailGallery() {
   const activeImageId = useOverlayStore((state) => state.activeImageId);
   const setActiveImageId = useOverlayStore((state) => state.setActiveImageId);
   const removeImage = useOverlayStore((state) => state.removeImage);
-  const { logo, isExporting, exportProgress, setExporting, updateImageStatus, settings } = useOverlayStore();
+  const { logo, isExporting, exportProgress, setExporting, updateImageStatus, settings: globalSettings, batchMode } = useOverlayStore();
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -157,10 +157,13 @@ export default function ThumbnailGallery() {
         updateImageStatus(img.id, 'processing');
         
         try {
+          // Use image-specific settings (always synced with global settings in batch mode)
+          const imgSettings = img.settings || globalSettings;
+          
           const formData = new FormData();
           formData.append('image', img.file);
           formData.append('logo', logoFile);
-          formData.append('settings', JSON.stringify(settings));
+          formData.append('settings', JSON.stringify(imgSettings));
 
           const response = await fetch('/api/process', {
             method: 'POST',

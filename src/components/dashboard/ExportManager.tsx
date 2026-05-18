@@ -64,7 +64,9 @@ export default function ExportManager() {
         updateImageStatus(img.id, 'processing');
         
         try {
-          const imgSettings = (!batchMode && img.settings) ? img.settings : globalSettings;
+          // Use image-specific settings (always synced with global settings in batch mode)
+          const imgSettings = img.settings || globalSettings;
+          
           const formData = new FormData();
           formData.append('image', img.file);
           formData.append('logo', logoFile);

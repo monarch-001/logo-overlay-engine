@@ -139,7 +139,14 @@ export const useOverlayStore = create<OverlayState>((set) => ({
     validated.opacity = validate(merged.opacity, currentSettings.opacity, 0, 1);
     validated.padding = validate(merged.padding, currentSettings.padding, 0, 50);
 
-    if (!state.batchMode && state.activeImageId) {
+    if (state.batchMode) {
+      // In batch mode, update global settings AND all individual image settings
+      return {
+        settings: validated,
+        images: state.images.map(img => ({ ...img, settings: validated }))
+      };
+    } else if (state.activeImageId) {
+      // In individual mode, only update the active image
       return {
         images: state.images.map(img => 
           img.id === state.activeImageId ? { ...img, settings: validated } : img
@@ -150,17 +157,7 @@ export const useOverlayStore = create<OverlayState>((set) => ({
     return { settings: validated };
   }),
 
-  setBatchMode: (batchMode) => set((state) => {
-    if (!batchMode) {
-      // When turning OFF batch mode, sync current global settings to all images
-      // so they start their independent editing from the current state.
-      return { 
-        batchMode,
-        images: state.images.map(img => ({ ...img, settings: { ...state.settings } }))
-      };
-    }
-    return { batchMode };
-  }),
+  setBatchMode: (batchMode) => set({ batchMode }),
 
   reset: () => set({
     logo: { original: null, processed: null, isProcessing: false },
