@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { X, CheckCircle2, Clock, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/imageUtils';
 
 const ThumbnailItem = memo(({ 
   img, 
@@ -160,8 +161,11 @@ export default function ThumbnailGallery() {
           // Use image-specific settings (always synced with global settings in batch mode)
           const imgSettings = img.settings || globalSettings;
           
+          // COMPRESS IMAGE before upload
+          const processedFile = await compressImage(img.file);
+          
           const formData = new FormData();
-          formData.append('image', img.file);
+          formData.append('image', processedFile);
           formData.append('logo', logoFile);
           formData.append('settings', JSON.stringify(imgSettings));
 

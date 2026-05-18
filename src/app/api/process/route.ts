@@ -9,6 +9,11 @@ export async function POST(req: NextRequest) {
     const settingsStr = formData.get('settings') as string;
 
     if (!imageFile || !logoFile || !settingsStr) {
+      console.error('Missing required fields:', { 
+        image: !!imageFile, 
+        logo: !!logoFile, 
+        settings: !!settingsStr 
+      });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -21,7 +26,12 @@ export async function POST(req: NextRequest) {
     const logoMetadata = await sharp(logoBuffer).metadata();
 
     if (!imageMetadata.width || !imageMetadata.height || !logoMetadata.width || !logoMetadata.height) {
-      throw new Error('Could not read image metadata');
+      throw new Error(`Could not read image metadata. Image: ${imageMetadata.width}x${imageMetadata.height}, Logo: ${logoMetadata.width}x${logoMetadata.height}`);
+    }
+
+    // Protection: If image is too large (e.g., > 10000px), it might crash the server
+    if (imageMetadata.width > 8000 || imageMetadata.height > 8000) {
+       console.warn('Image is very large, attempting to process anyway:', imageMetadata.width, 'x', imageMetadata.height);
     }
 
     // 2. Calculate target logo dimensions based on scale setting

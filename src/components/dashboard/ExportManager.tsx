@@ -7,6 +7,7 @@ import { useOverlayStore } from '@/store/useOverlayStore';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
+import { compressImage } from '@/lib/imageUtils';
 
 export default function ExportManager() {
   const { 
@@ -67,8 +68,11 @@ export default function ExportManager() {
           // Use image-specific settings (always synced with global settings in batch mode)
           const imgSettings = img.settings || globalSettings;
           
+          // COMPRESS IMAGE before upload to avoid 413 Payload Too Large
+          const processedFile = await compressImage(img.file);
+          
           const formData = new FormData();
-          formData.append('image', img.file);
+          formData.append('image', processedFile);
           formData.append('logo', logoFile);
           formData.append('settings', JSON.stringify(imgSettings));
 

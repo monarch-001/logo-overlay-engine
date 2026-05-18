@@ -20,8 +20,23 @@ export default function LogoUpload() {
       const blob = await removeBackground(file, {
         publicPath: "https://staticimgly.com/@imgly/background-removal-data/1.7.0/dist/",
         progress: (status, progress) => {
-          // You could track progress here if needed
-          console.log(`Processing: ${status} (${(progress * 100).toFixed(0)}%)`);
+          // Some stages report progress as bytes or sequential steps, 
+          // we normalize it to a safe 0-100% display or simple status.
+          const isFetch = status.startsWith('fetch:');
+          const isCompute = status.startsWith('compute:');
+          
+          let displayProgress = "";
+          if (isFetch && progress > 1) {
+             // If fetch reports large numbers, it's likely bytes. 
+             // Without knowing 'total', we just show the status.
+             displayProgress = "Downloading model...";
+          } else if (isCompute && progress > 1) {
+             // If compute reports > 1, it might be stage steps (100, 200, 300)
+             displayProgress = `Processing: ${status.split(':')[1]}...`;
+          } else {
+             displayProgress = `${status} (${(Math.min(1, progress) * 100).toFixed(0)}%)`;
+          }
+          console.log(`[AI] ${displayProgress}`);
         }
       });
       const processedUrl = URL.createObjectURL(blob);
